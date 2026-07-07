@@ -5,11 +5,11 @@ export class Store {
   constructor(private pool: Pool) {}
 
   // ---- Users ----
-  async createUser(data: Omit<User, 'id' | 'createdAt'>): Promise<User> {
+  async createUser(data: Omit<User, 'id' | 'createdAt' | 'avatarUrl'>): Promise<User> {
     const { rows } = await this.pool.query<UserRow>(
       `INSERT INTO users (email, display_name, password_hash)
        VALUES ($1, $2, $3)
-       RETURNING id, email, display_name, password_hash, created_at`,
+       RETURNING id, email, display_name, password_hash, avatar_url, created_at`,
       [data.email, data.displayName, data.passwordHash]
     );
     return rowToUser(rows[0]);
@@ -17,7 +17,7 @@ export class Store {
 
   async findUserByEmail(email: string): Promise<User | undefined> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, email, display_name, password_hash, created_at
+      `SELECT id, email, display_name, password_hash, avatar_url, created_at
        FROM users WHERE email = $1`,
       [email]
     );
@@ -26,19 +26,28 @@ export class Store {
 
   async findUserById(id: string): Promise<User | undefined> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, email, display_name, password_hash, created_at
+      `SELECT id, email, display_name, password_hash, avatar_url, created_at
        FROM users WHERE id = $1`,
       [id]
     );
     return rows[0] ? rowToUser(rows[0]) : undefined;
   }
 
+  async setUserAvatar(id: string, avatarUrl: string): Promise<User | undefined> {
+    const { rows } = await this.pool.query<UserRow>(
+      `UPDATE users SET avatar_url = $1 WHERE id = $2
+       RETURNING id, email, display_name, password_hash, avatar_url, created_at`,
+      [avatarUrl, id]
+    );
+    return rows[0] ? rowToUser(rows[0]) : undefined;
+  }
+
   // ---- Parties ----
-  async createParty(data: Omit<Party, 'id' | 'createdAt' | 'memberCount'>): Promise<Party> {
+  async createParty(data: Omit<Party, 'id' | 'createdAt' | 'memberCount' | 'photoUrl'>): Promise<Party> {
     const { rows } = await this.pool.query<PartyRow>(
       `INSERT INTO parties (host_id, title, description, address, starts_at, location)
        VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography)
-       RETURNING id, host_id, title, description, address, starts_at, created_at,
+       RETURNING id, host_id, title, description, address, starts_at, photo_url, created_at,
                  ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, 0 AS member_count`,
       [data.hostId, data.title, data.description, data.address ?? null, data.startsAt, data.lng, data.lat]
     );
@@ -47,7 +56,7 @@ export class Store {
 
   async listParties(): Promise<Party[]> {
     const { rows } = await this.pool.query<PartyRow>(
-      `SELECT p.id, p.host_id, p.title, p.description, p.address, p.starts_at, p.created_at,
+      `SELECT p.id, p.host_id, p.title, p.description, p.address, p.starts_at, p.photo_url, p.created_at,
               ST_Y(p.location::geometry) AS lat, ST_X(p.location::geometry) AS lng,
               COUNT(pm.user_id) AS member_count
        FROM parties p
@@ -60,7 +69,7 @@ export class Store {
 
   async findPartyById(id: string): Promise<Party | undefined> {
     const { rows } = await this.pool.query<PartyRow>(
-      `SELECT p.id, p.host_id, p.title, p.description, p.address, p.starts_at, p.created_at,
+      `SELECT p.id, p.host_id, p.title, p.description, p.address, p.starts_at, p.photo_url, p.created_at,
               ST_Y(p.location::geometry) AS lat, ST_X(p.location::geometry) AS lng,
               COUNT(pm.user_id) AS member_count
        FROM parties p
@@ -70,6 +79,11 @@ export class Store {
       [id]
     );
     return rows[0] ? rowToParty(rows[0]) : undefined;
+  }
+
+  async setPartyPhoto(id: string, photoUrl: string): Promise<Party | undefined> {
+    await this.pool.query('UPDATE parties SET photo_url = $1 WHERE id = $2', [photoUrl, id]);
+    return this.findPartyById(id);
   }
 
   async updateParty(
@@ -98,7 +112,7 @@ export class Store {
     const { rows } = await this.pool.query<PartyRow>(
       `UPDATE parties SET ${sets.join(', ')}
        WHERE id = $${idx}
-       RETURNING id, host_id, title, description, address, starts_at, created_at,
+       RETURNING id, host_id, title, description, address, starts_at, photo_url, created_at,
                  ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng, 0 AS member_count`,
       values
     );
@@ -112,7 +126,7 @@ export class Store {
 
   async findPartiesNear(lat: number, lng: number, radiusKm: number): Promise<Party[]> {
     const { rows } = await this.pool.query<PartyRow>(
-      `SELECT p.id, p.host_id, p.title, p.description, p.address, p.starts_at, p.created_at,
+      `SELECT p.id, p.host_id, p.title, p.description, p.address, p.starts_at, p.photo_url, p.created_at,
               ST_Y(p.location::geometry) AS lat, ST_X(p.location::geometry) AS lng,
               COUNT(pm.user_id) AS member_count
        FROM parties p
@@ -174,6 +188,7 @@ interface UserRow {
   email: string;
   display_name: string;
   password_hash: string;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -184,6 +199,7 @@ interface PartyRow {
   description: string;
   address: string | null;
   starts_at: string;
+  photo_url: string | null;
   created_at: string;
   lat: number;
   lng: number;
@@ -203,6 +219,7 @@ function rowToUser(row: UserRow): User {
     email: row.email,
     displayName: row.display_name,
     passwordHash: row.password_hash,
+    avatarUrl: row.avatar_url ?? undefined,
     createdAt: row.created_at,
   };
 }
@@ -215,6 +232,7 @@ function rowToParty(row: PartyRow): Party {
     description: row.description,
     address: row.address ?? undefined,
     startsAt: row.starts_at,
+    photoUrl: row.photo_url ?? undefined,
     lat: row.lat,
     lng: row.lng,
     createdAt: row.created_at,

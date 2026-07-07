@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT UNIQUE NOT NULL,
   display_name  TEXT NOT NULL,
   password_hash TEXT NOT NULL,
+  avatar_url    TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS parties (
   address     TEXT,
   starts_at   TIMESTAMPTZ NOT NULL,
   location    GEOGRAPHY(Point, 4326) NOT NULL,
+  photo_url   TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

@@ -4,6 +4,7 @@ export interface User {
   displayName: string;
   passwordHash: string;
   createdAt: string;
+  avatarUrl?: string;
 }
 
 export interface Party {
@@ -17,6 +18,7 @@ export interface Party {
   startsAt: string;
   createdAt: string;
   memberCount?: number;
+  photoUrl?: string;
 }
 
 export interface PublicUser {

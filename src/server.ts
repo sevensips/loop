@@ -1,18 +1,22 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import dbPlugin from './plugins/db.js';
 import storePlugin from './plugins/store.js';
 import redisPlugin from './plugins/redis.js';
 import rateLimitPlugin from './plugins/rateLimit.js';
 import authPlugin from './plugins/auth.js';
 import wsPlugin from './plugins/ws.js';
+import storagePlugin from './plugins/storage.js';
 import { authRoutes } from './routes/auth.js';
 import { partyRoutes } from './routes/parties.js';
+import { uploadRoutes } from './routes/uploads.js';
 
 const app = Fastify({ logger: true });
 
 async function main() {
   await app.register(cors, { origin: true });
+  await app.register(multipart);
   // Postgres — до store, store — до роутов, которые на него полагаются
   await app.register(dbPlugin);
   await app.register(storePlugin);
@@ -21,9 +25,11 @@ async function main() {
   await app.register(rateLimitPlugin);
   await app.register(authPlugin);
   await app.register(wsPlugin);
+  await app.register(storagePlugin);
 
   await app.register(authRoutes);
   await app.register(partyRoutes);
+  await app.register(uploadRoutes);
 
   app.get('/health', async () => ({ status: 'ok' }));
 

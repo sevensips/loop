@@ -74,3 +74,27 @@ Authorization: Bearer {{token}}
 
 ### Геопоиск (радиус 5 км от центра Москвы)
 GET {{base}}/parties/near?lat=55.75&lng=37.61&radiusKm=5
+
+### Загрузить обложку вечеринки (только хозяин, multipart/form-data)
+POST {{base}}/parties/ВАШ_PARTY_ID/photo
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="cover.jpg"
+Content-Type: image/jpeg
+
+< ./cover.jpg
+--boundary--
+
+### Загрузить свой аватар (multipart/form-data)
+POST {{base}}/users/me/avatar
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./avatar.jpg
+--boundary--

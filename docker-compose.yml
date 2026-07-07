@@ -28,6 +28,24 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: partyloop
+      MINIO_ROOT_PASSWORD: partyloop-secret
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # веб-консоль (http://localhost:9001)
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build: .
     restart: unless-stopped
@@ -36,13 +54,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
       PORT: 3000
       DATABASE_URL: postgres://partyloop:partyloop@postgres:5432/partyloop
       REDIS_URL: redis://redis:6379
       JWT_SECRET: dev-secret-change-me-in-production
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: http://192.168.1.106:9000
+      S3_BUCKET: partyloop
+      S3_ACCESS_KEY: partyloop
+      S3_SECRET_KEY: partyloop-secret
     ports:
       - "3000:3000"
 
 volumes:
   pgdata:
+  miniodata:
