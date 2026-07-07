@@ -9,7 +9,7 @@ export class Store {
     const { rows } = await this.pool.query<UserRow>(
       `INSERT INTO users (email, display_name, password_hash)
        VALUES ($1, $2, $3)
-       RETURNING id, email, display_name, password_hash, avatar_url, created_at`,
+       RETURNING id, email, display_name, password_hash, avatar_url, push_token, created_at`,
       [data.email, data.displayName, data.passwordHash]
     );
     return rowToUser(rows[0]);
@@ -17,7 +17,7 @@ export class Store {
 
   async findUserByEmail(email: string): Promise<User | undefined> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, email, display_name, password_hash, avatar_url, created_at
+      `SELECT id, email, display_name, password_hash, avatar_url, push_token, created_at
        FROM users WHERE email = $1`,
       [email]
     );
@@ -26,7 +26,7 @@ export class Store {
 
   async findUserById(id: string): Promise<User | undefined> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, email, display_name, password_hash, avatar_url, created_at
+      `SELECT id, email, display_name, password_hash, avatar_url, push_token, created_at
        FROM users WHERE id = $1`,
       [id]
     );
@@ -41,6 +41,19 @@ export class Store {
     );
     return rows[0] ? rowToUser(rows[0]) : undefined;
   }
+
+  async setPushToken(id: string, token: string | null): Promise<void> {
+  await this.pool.query('UPDATE users SET push_token = $1 WHERE id = $2', [token, id]);
+  }
+
+async updateDisplayName(id: string, displayName: string): Promise<User | undefined> {
+  const { rows } = await this.pool.query<UserRow>(
+    `UPDATE users SET display_name = $1 WHERE id = $2
+     RETURNING id, email, display_name, password_hash, avatar_url, push_token, created_at`,
+    [displayName, id]
+  );
+  return rows[0] ? rowToUser(rows[0]) : undefined;
+}
 
   // ---- Parties ----
   async createParty(data: Omit<Party, 'id' | 'createdAt' | 'memberCount' | 'photoUrl'>): Promise<Party> {
@@ -190,6 +203,7 @@ interface UserRow {
   password_hash: string;
   avatar_url: string | null;
   created_at: string;
+  push_token: string | null;
 }
 
 interface PartyRow {
@@ -221,6 +235,7 @@ function rowToUser(row: UserRow): User {
     passwordHash: row.password_hash,
     avatarUrl: row.avatar_url ?? undefined,
     createdAt: row.created_at,
+    pushToken: row.push_token ?? undefined,
   };
 }
 

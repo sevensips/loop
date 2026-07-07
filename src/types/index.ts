@@ -3,8 +3,9 @@ export interface User {
   email: string;
   displayName: string;
   passwordHash: string;
-  createdAt: string;
+  pushToken?: string;
   avatarUrl?: string;
+  createdAt: string;
 }
 
 export interface Party {

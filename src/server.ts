@@ -11,6 +11,7 @@ import storagePlugin from './plugins/storage.js';
 import { authRoutes } from './routes/auth.js';
 import { partyRoutes } from './routes/parties.js';
 import { uploadRoutes } from './routes/uploads.js';
+import { userRoutes } from './routes/users.js';
 
 const app = Fastify({ logger: true });
 
@@ -24,6 +25,7 @@ async function main() {
   await app.register(redisPlugin);
   await app.register(rateLimitPlugin);
   await app.register(authPlugin);
+  await app.register(userRoutes);
   await app.register(wsPlugin);
   await app.register(storagePlugin);
 
