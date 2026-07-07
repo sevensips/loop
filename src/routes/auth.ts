@@ -1,10 +1,17 @@
 import type { FastifyInstance } from 'fastify';
-import { createHash } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { toPublicUser } from '../types/index.js';
 
-// Простой хэш пароля для MVP. Перед реальным продакшеном - заменить на bcrypt/argon2.
-function hashPassword(password: string): string {
-  return createHash('sha256').update(password).digest('hex');
+// bcrypt с солью на каждый пароль — 10 раундов достаточно для MVP,
+// не проседает по CPU, но брутфорс уже не поставить на поток.
+const SALT_ROUNDS = 10;
+
+function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
+}
+
+function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
 }
 
 // Более строгий лимит на auth-роуты, чтобы затруднить брутфорс паролей/спам регистраций.
@@ -28,7 +35,7 @@ export async function authRoutes(app: FastifyInstance) {
       const user = await app.store.createUser({
         email,
         displayName,
-        passwordHash: hashPassword(password),
+        passwordHash: await hashPassword(password),
       });
 
       const token = app.signUserToken(user.id);
@@ -44,7 +51,7 @@ export async function authRoutes(app: FastifyInstance) {
       const { email, password } = request.body;
       const user = await app.store.findUserByEmail(email);
 
-      if (!user || user.passwordHash !== hashPassword(password)) {
+      if (!user || !(await verifyPassword(password, user.passwordHash))) {
         return reply.code(401).send({ error: 'Неверный email или пароль' });
       }
 

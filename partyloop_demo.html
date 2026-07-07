@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PartyLoop — демо</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0b19;
+    --bg-2: #171226;
+    --surface: #1b1530;
+    --surface-2: #241c3e;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.16);
+    --text: #f3eefc;
+    --text-muted: #9d94bd;
+    --text-dim: #6b6390;
+    --pink: #ff4d8d;
+    --pink-dim: #ff4d8d33;
+    --amber: #ffb648;
+    --amber-dim: #ffb64833;
+    --teal: #3ddc97;
+    --teal-dim: #3ddc9733;
+    --radius: 18px;
+    --radius-sm: 10px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, #2a1a4a 0%, transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, #3a1230 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 80px;
+  }
+
+  .app { width: 100%; max-width: 560px; }
+
+  /* ---------- header ---------- */
+  .brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .brand-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--pink), var(--amber));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 650;
+    font-size: 20px;
+    color: #1a0e12;
+    box-shadow: 0 0 24px -4px var(--pink-dim);
+  }
+  .wordmark {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 650;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+  }
+  .ws-status {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    background: var(--surface);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.3s;
+  }
+  .dot.live { background: var(--teal); box-shadow: 0 0 8px var(--teal); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ---------- config bar ---------- */
+  .config {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .config input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+  }
+  .config input:focus { outline: none; border-color: var(--border-strong); color: var(--text); }
+
+  /* ---------- card shell ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
+  h2.section-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 19px;
+    margin: 0 0 4px;
+  }
+  .section-sub {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 0 0 20px;
+  }
+
+  /* ---------- tabs (auth) ---------- */
+  .tabs { display: flex; gap: 4px; background: var(--bg-2); padding: 4px; border-radius: 100px; margin-bottom: 20px; }
+  .tab {
+    flex: 1; text-align: center; padding: 8px 0;
+    border-radius: 100px; font-size: 13px; font-weight: 600;
+    color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+  }
+  .tab.active { background: var(--surface-2); color: var(--text); }
+
+  label { display: block; font-size: 12px; color: var(--text-muted); margin: 14px 0 6px; font-weight: 500; }
+  label:first-of-type { margin-top: 0; }
+  input, textarea {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 13px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--pink); }
+  textarea { resize: vertical; min-height: 64px; }
+
+  .btn {
+    width: 100%;
+    margin-top: 18px;
+    padding: 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--pink), #ff7a4d);
+    color: #1a0a10;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px -6px var(--pink-dim); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+  .btn.ghost {
+    background: transparent; border: 1px solid var(--border-strong); color: var(--text);
+  }
+  .btn.small { width: auto; margin-top: 0; padding: 8px 14px; font-size: 12px; }
+
+  .error {
+    background: #ff4d8d15; border: 1px solid #ff4d8d55; color: #ff9dbc;
+    font-size: 13px; padding: 10px 12px; border-radius: var(--radius-sm); margin-top: 14px;
+  }
+
+  /* ---------- main app (post-login) ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+  }
+  .me {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--amber), var(--pink));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #1a0e12;
+  }
+  .me-name { font-size: 13px; font-weight: 600; }
+  .me-sub { font-size: 11px; color: var(--text-dim); }
+  .logout { background: none; border: none; color: var(--text-dim); font-size: 12px; cursor: pointer; text-decoration: underline; }
+
+  .maintabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .maintab {
+    padding: 9px 16px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; background: var(--surface);
+  }
+  .maintab.active { border-color: var(--pink); color: var(--text); background: var(--pink-dim); }
+
+  /* ---------- radar ---------- */
+  .radar-wrap { position: relative; display: flex; justify-content: center; margin-bottom: 22px; }
+  .radar {
+    width: 220px; height: 220px; border-radius: 50%;
+    background: radial-gradient(circle, var(--bg-2) 0%, var(--bg) 70%);
+    border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .radar::before, .radar::after {
+    content: ''; position: absolute; border-radius: 50%; border: 1px solid var(--border);
+  }
+  .radar::before { inset: 30px; }
+  .radar::after { inset: 60px; }
+  .radar-center {
+    position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+    background: var(--teal); border-radius: 50%; transform: translate(-50%,-50%);
+    box-shadow: 0 0 12px var(--teal);
+  }
+  .radar-sweep {
+    position: absolute; top: 50%; left: 50%; width: 50%; height: 1px;
+    background: linear-gradient(90deg, var(--teal), transparent);
+    transform-origin: left center;
+    animation: sweep 4s linear infinite;
+    opacity: 0.6;
+  }
+  @keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .radar-pin {
+    position: absolute; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--pink); transform: translate(-50%,-50%);
+    box-shadow: 0 0 10px var(--pink);
+    animation: pulse 1.8s ease-in-out infinite;
+    cursor: pointer;
+  }
+
+  /* ---------- party card ---------- */
+  .party {
+    display: flex; gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+  }
+  .party.hot { border-left-color: var(--pink); }
+  .party-main { flex: 1; min-width: 0; }
+  .party-title { font-weight: 700; font-size: 15px; margin: 0 0 3px; }
+  .party-desc { font-size: 13px; color: var(--text-muted); margin: 0 0 8px; line-height: 1.4; }
+  .party-meta { display: flex; gap: 14px; flex-wrap: wrap; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .party-meta span { display: flex; align-items: center; gap: 4px; }
+  .party-actions { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+
+  .empty {
+    text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 13px;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface-2); border: 1px solid var(--teal-dim); border-left: 3px solid var(--teal);
+    padding: 12px 18px; border-radius: var(--radius-sm); font-size: 13px;
+    opacity: 0; transition: all 0.3s; pointer-events: none; max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .foot-note { text-align: center; color: var(--text-dim); font-size: 11px; margin-top: 20px; font-family: 'Space Mono', monospace; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="brand">
+    <div class="brand-left">
+      <div class="logo">P</div>
+      <div class="wordmark">partyloop</div>
+    </div>
+    <div class="ws-status"><span class="dot" id="wsDot"></span><span id="wsLabel">не подключено</span></div>
+  </div>
+
+  <div class="config">
+    <input id="apiBase" value="http://localhost:3000" spellcheck="false" />
+  </div>
+
+  <!-- AUTH VIEW -->
+  <div id="authView" class="card">
+    <h2 class="section-title">Заходи на движуху</h2>
+    <p class="section-sub">Живая демка твоего API — реальные запросы, реальный WebSocket.</p>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="login">Вход</div>
+      <div class="tab" data-tab="register">Регистрация</div>
+    </div>
+
+    <div id="loginForm">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="a@a.com" />
+      <label>Пароль</label>
+      <input id="loginPassword" type="password" placeholder="••••••••" />
+      <button class="btn" id="loginBtn">Войти</button>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <label>Имя</label>
+      <input id="regName" placeholder="Вася" />
+      <label>Email</label>
+      <input id="regEmail" type="email" placeholder="a@a.com" />
+      <label>Пароль</label>
+      <input id="regPassword" type="password" placeholder="минимум 5 символов" />
+      <button class="btn" id="registerBtn">Создать аккаунт</button>
+    </div>
+
+    <div id="authError" class="error hidden"></div>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <div id="mainView" class="hidden">
+    <div class="topbar">
+      <div class="me">
+        <div class="avatar" id="avatarLetter">?</div>
+        <div>
+          <div class="me-name" id="meName">—</div>
+          <div class="me-sub" id="meSub">—</div>
+        </div>
+      </div>
+      <button class="logout" id="logoutBtn">выйти</button>
+    </div>
+
+    <div class="maintabs">
+      <div class="maintab active" data-maintab="feed">Рядом</div>
+      <div class="maintab" data-maintab="create">Создать</div>
+    </div>
+
+    <!-- FEED -->
+    <div id="feedTab">
+      <div class="radar-wrap">
+        <div class="radar" id="radar">
+          <div class="radar-sweep"></div>
+          <div class="radar-center"></div>
+        </div>
+      </div>
+      <div class="section-sub" style="text-align:center;margin-bottom:16px;" id="geoStatus">определяю геопозицию…</div>
+
+      <div id="partyList"></div>
+    </div>
+
+    <!-- CREATE -->
+    <div id="createTab" class="card hidden">
+      <h2 class="section-title">Новая вечеринка</h2>
+      <p class="section-sub">Разошлём всем подключённым в реальном времени.</p>
+
+      <label>Название</label>
+      <input id="cTitle" placeholder="Движуха на районе" />
+      <label>Описание</label>
+      <textarea id="cDesc" placeholder="Приходи, будет весело"></textarea>
+      <label>Адрес (необязательно)</label>
+      <input id="cAddress" placeholder="ул. Ленина, 12" />
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;"><label>Широта (lat)</label><input id="cLat" placeholder="55.75" /></div>
+        <div style="flex:1;"><label>Долгота (lng)</label><input id="cLng" placeholder="37.61" /></div>
+      </div>
+      <label>Начало</label>
+      <input id="cStarts" type="datetime-local" />
+      <button class="btn" id="createBtn">Создать вечеринку</button>
+      <div id="createError" class="error hidden"></div>
+    </div>
+  </div>
+
+  <div class="foot-note">демо-клиент · бьёт напрямую в твой локальный API</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let token = null;
+let me = null;
+let ws = null;
+let myCoords = null;
+
+const $ = id => document.getElementById(id);
+const apiBase = () => $('apiBase').value.replace(/\/$/, '');
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+async function api(path, opts = {}) {
+  const headers = opts.headers || {};
+  headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(apiBase() + path, { ...opts, headers });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error((data && data.error) || `Ошибка ${res.status}`);
+  return data;
+}
+
+// ---- tabs (auth) ----
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const isLogin = tab.dataset.tab === 'login';
+    $('loginForm').classList.toggle('hidden', !isLogin);
+    $('registerForm').classList.toggle('hidden', isLogin);
+    $('authError').classList.add('hidden');
+  });
+});
+
+document.querySelectorAll('.maintab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.maintab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const isFeed = tab.dataset.maintab === 'feed';
+    $('feedTab').classList.toggle('hidden', !isFeed);
+    $('createTab').classList.toggle('hidden', isFeed);
+  });
+});
+
+// ---- auth actions ----
+$('loginBtn').addEventListener('click', async () => {
+  $('authError').classList.add('hidden');
+  try {
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: $('loginEmail').value, password: $('loginPassword').value })
+    });
+    onAuthed(data);
+  } catch (e) { authFail(e); }
+});
+
+$('registerBtn').addEventListener('click', async () => {
+  $('authError').classList.add('hidden');
+  try {
+    const data = await api('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: $('regEmail').value,
+        password: $('regPassword').value,
+        displayName: $('regName').value
+      })
+    });
+    onAuthed(data);
+  } catch (e) { authFail(e); }
+});
+
+function authFail(e) {
+  $('authError').textContent = e.message;
+  $('authError').classList.remove('hidden');
+}
+
+function onAuthed(data) {
+  token = data.token;
+  me = data.user;
+  $('authView').classList.add('hidden');
+  $('mainView').classList.remove('hidden');
+  $('meName').textContent = me.displayName;
+  $('meSub').textContent = me.email;
+  $('avatarLetter').textContent = (me.displayName || '?')[0].toUpperCase();
+  showToast(`Привет, ${me.displayName} 👋`);
+  connectWS();
+  locateAndLoad();
+}
+
+$('logoutBtn').addEventListener('click', async () => {
+  try { await api('/auth/logout', { method: 'POST' }); } catch (e) {}
+  token = null; me = null;
+  if (ws) ws.close();
+  $('mainView').classList.add('hidden');
+  $('authView').classList.remove('hidden');
+});
+
+// ---- geolocation + feed ----
+function locateAndLoad() {
+  $('geoStatus').textContent = 'определяю геопозицию…';
+  if (!navigator.geolocation) {
+    myCoords = { lat: 55.751244, lng: 37.618423 };
+    $('geoStatus').textContent = 'геолокация недоступна — используем Москву';
+    loadParties();
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      myCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      $('geoStatus').textContent = `рядом с тобой · ${myCoords.lat.toFixed(3)}, ${myCoords.lng.toFixed(3)}`;
+      loadParties();
+    },
+    () => {
+      myCoords = { lat: 55.751244, lng: 37.618423 };
+      $('geoStatus').textContent = 'доступ к геопозиции отклонён — используем Москву';
+      loadParties();
+    }
+  );
+}
+
+async function loadParties() {
+  if (!myCoords) return;
+  try {
+    const data = await api(`/parties/near?lat=${myCoords.lat}&lng=${myCoords.lng}&radiusKm=25`);
+    renderParties(data.parties || []);
+  } catch (e) {
+    try {
+      const data = await api('/parties');
+      renderParties(data.parties || []);
+    } catch (e2) {
+      showToast('Не удалось загрузить: ' + e2.message);
+    }
+  }
+}
+
+function renderParties(parties) {
+  const list = $('partyList');
+  const radar = $('radar');
+  radar.querySelectorAll('.radar-pin').forEach(p => p.remove());
+
+  if (!parties.length) {
+    list.innerHTML = '<div class="empty">Пока тихо. Создай первую вечеринку рядом →</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  parties.forEach((p, i) => {
+    const isHot = (p.memberCount || 0) >= 3;
+    const el = document.createElement('div');
+    el.className = 'party' + (isHot ? ' hot' : '');
+    const starts = p.startsAt ? new Date(p.startsAt) : null;
+    const startsLabel = starts ? starts.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+    el.innerHTML = `
+      <div class="party-main">
+        <div class="party-title">${escapeHtml(p.title)}</div>
+        <div class="party-desc">${escapeHtml(p.description || 'без описания')}</div>
+        <div class="party-meta">
+          <span>🕒 ${startsLabel}</span>
+          <span>👥 ${p.memberCount ?? 0}</span>
+          ${p.address ? `<span>📍 ${escapeHtml(p.address)}</span>` : ''}
+        </div>
+      </div>
+      <div class="party-actions">
+        <button class="btn small" data-join="${p.id}">Идти</button>
+      </div>
+    `;
+    list.appendChild(el);
+
+    // radar pin — pseudo-random stable position based on index
+    const angle = (i * 47 + 20) % 360;
+    const dist = 30 + ((i * 31) % 55);
+    const rad = angle * Math.PI / 180;
+    const x = 50 + Math.cos(rad) * (dist / 2);
+    const y = 50 + Math.sin(rad) * (dist / 2);
+    const pin = document.createElement('div');
+    pin.className = 'radar-pin';
+    pin.style.left = x + '%';
+    pin.style.top = y + '%';
+    pin.title = p.title;
+    radar.appendChild(pin);
+  });
+
+  list.querySelectorAll('[data-join]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try {
+        await api(`/parties/${btn.dataset.join}/join`, { method: 'POST' });
+        showToast('Записал тебя 🎉');
+        loadParties();
+      } catch (e) { showToast(e.message); }
+    });
+  });
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ---- create party ----
+$('createBtn').addEventListener('click', async () => {
+  $('createError').classList.add('hidden');
+  try {
+    const startsAt = $('cStarts').value ? new Date($('cStarts').value).toISOString() : null;
+    if (!startsAt) throw new Error('Укажи дату и время начала');
+    await api('/parties', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: $('cTitle').value,
+        description: $('cDesc').value,
+        address: $('cAddress').value,
+        lat: parseFloat($('cLat').value),
+        lng: parseFloat($('cLng').value),
+        startsAt
+      })
+    });
+    showToast('Вечеринка создана 🎉');
+    ['cTitle','cDesc','cAddress','cLat','cLng','cStarts'].forEach(id => $(id).value = '');
+    document.querySelector('[data-maintab="feed"]').click();
+    loadParties();
+  } catch (e) {
+    $('createError').textContent = e.message;
+    $('createError').classList.remove('hidden');
+  }
+});
+
+// ---- websocket ----
+function connectWS() {
+  try {
+    const url = apiBase().replace(/^http/, 'ws') + '/ws';
+    ws = new WebSocket(url);
+    ws.onopen = () => { $('wsDot').classList.add('live'); $('wsLabel').textContent = 'live'; };
+    ws.onclose = () => { $('wsDot').classList.remove('live'); $('wsLabel').textContent = 'отключено'; };
+    ws.onerror = () => { $('wsLabel').textContent = 'ошибка ws'; };
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        if (msg.type === 'party:new') { showToast(`Новая вечеринка: ${msg.payload.title}`); loadParties(); }
+        if (msg.type === 'party:updated') { loadParties(); }
+        if (msg.type === 'party:deleted') { loadParties(); }
+      } catch (e) {}
+    };
+  } catch (e) { $('wsLabel').textContent = 'ws недоступен'; }
+}
+</script>
+</body>
+</html>

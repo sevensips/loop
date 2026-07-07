@@ -1,0 +1,76 @@
+# partyloop API — тесты (VS Code REST Client / JetBrains HTTP Client)
+# Подставь свой токен в переменную @token после логина.
+
+@base = http://localhost:3000
+@token = ТВОЙ_ТОКЕН_СЮДА
+
+### Healthcheck
+GET {{base}}/health
+
+### Регистрация
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{"email": "vasya@test.com", "password": "secret123", "displayName": "Вася"}
+
+### Логин
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{"email": "vasya@test.com", "password": "secret123"}
+
+### Текущий пользователь
+GET {{base}}/auth/me
+Authorization: Bearer {{token}}
+
+### Логаут (отзыв токена)
+POST {{base}}/auth/logout
+Authorization: Bearer {{token}}
+
+### Создать вечеринку
+POST {{base}}/parties
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Движуха на Чистых прудах",
+  "description": "Приходи, будет весело",
+  "lat": 55.7639,
+  "lng": 37.6386,
+  "address": "Чистопрудный бульвар, 12",
+  "startsAt": "2026-08-01T20:00:00Z"
+}
+
+### Список всех вечеринок
+GET {{base}}/parties
+
+### Вечеринка по ID
+GET {{base}}/parties/ВАШ_PARTY_ID
+
+### Редактировать вечеринку (PATCH — только свои поля)
+PATCH {{base}}/parties/ВАШ_PARTY_ID
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Движуха на Чистых прудах — ОБНОВЛЕНО",
+  "startsAt": "2026-08-02T21:00:00Z"
+}
+
+### Записаться на вечеринку
+POST {{base}}/parties/ВАШ_PARTY_ID/join
+Authorization: Bearer {{token}}
+
+### Список участников вечеринки
+GET {{base}}/parties/ВАШ_PARTY_ID/members
+
+### Отписаться от вечеринки
+DELETE {{base}}/parties/ВАШ_PARTY_ID/join
+Authorization: Bearer {{token}}
+
+### Удалить вечеринку
+DELETE {{base}}/parties/ВАШ_PARTY_ID
+Authorization: Bearer {{token}}
+
+### Геопоиск (радиус 5 км от центра Москвы)
+GET {{base}}/parties/near?lat=55.75&lng=37.61&radiusKm=5

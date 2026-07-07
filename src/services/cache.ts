@@ -14,11 +14,15 @@ export async function setCachedParties(redis: Redis, key: string, parties: Party
   await redis.set(key, JSON.stringify(parties), 'EX', TTL_SECONDS);
 }
 
-// Простая инвалидация по префиксу через KEYS — нормально для MVP-объёмов.
-// На большом инстансе Redis стоит заменить на SCAN, чтобы не блокировать сервер.
+// Инвалидация по префиксу через SCAN — не блокирует Redis на больших объёмах ключей,
+// в отличие от KEYS, которая сканирует всё одним синхронным проходом.
 export async function invalidatePartiesCache(redis: Redis): Promise<void> {
-  const keys = await redis.keys('parties:*');
-  if (keys.length) {
-    await redis.del(...keys);
-  }
+  let cursor = '0';
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'parties:*', 'COUNT', 100);
+    cursor = nextCursor;
+    if (keys.length) {
+      await redis.del(...keys);
+    }
+  } while (cursor !== '0');
 }

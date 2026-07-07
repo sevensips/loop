@@ -1,5 +1,4 @@
 -- Выполняется автоматически при первом старте контейнера postgres
--- (docker-entrypoint-initdb.d подхватывает *.sql на пустом volume).
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -19,12 +18,19 @@ CREATE TABLE IF NOT EXISTS parties (
   description TEXT NOT NULL DEFAULT '',
   address     TEXT,
   starts_at   TIMESTAMPTZ NOT NULL,
-  -- geography(Point) хранит lat/lng в метрах "из коробки" — ST_DWithin ниже
-  -- сразу считает расстояние в метрах без ручной гаверсинус-математики.
   location    GEOGRAPHY(Point, 4326) NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- GIST-индекс — тот самый, который делает /parties/near быстрым на больших объёмах
 CREATE INDEX IF NOT EXISTS parties_location_idx ON parties USING GIST (location);
 CREATE INDEX IF NOT EXISTS parties_starts_at_idx ON parties (starts_at);
+
+-- Таблица участников вечеринок
+CREATE TABLE IF NOT EXISTS party_members (
+  party_id   UUID NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  joined_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (party_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS party_members_user_idx ON party_members (user_id);

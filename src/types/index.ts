@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
-  passwordHash: string; // упростим пока - потом заменим на OAuth/JWT-полный флоу
+  passwordHash: string;
   createdAt: string;
 }
 
@@ -14,8 +14,9 @@ export interface Party {
   lat: number;
   lng: number;
   address?: string;
-  startsAt: string; // ISO string
+  startsAt: string;
   createdAt: string;
+  memberCount?: number;
 }
 
 export interface PublicUser {
