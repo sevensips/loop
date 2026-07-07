@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import { store } from '../services/store.js';
 import { broadcastNewParty } from '../plugins/ws.js';
 import { getCachedParties, setCachedParties, invalidatePartiesCache } from '../services/cache.js';
 
@@ -26,7 +25,7 @@ export async function partyRoutes(app: FastifyInstance) {
       return reply.send({ parties: cached, cached: true });
     }
 
-    const parties = store.listParties();
+    const parties = await app.store.listParties();
     await setCachedParties(app.redis, 'parties:list', parties);
     return reply.send({ parties });
   });
@@ -47,13 +46,13 @@ export async function partyRoutes(app: FastifyInstance) {
       return reply.send({ parties: cached, cached: true });
     }
 
-    const parties = store.findPartiesNear(parseFloat(lat), parseFloat(lng), radius);
+    const parties = await app.store.findPartiesNear(parseFloat(lat), parseFloat(lng), radius);
     await setCachedParties(app.redis, cacheKey, parties);
     return reply.send({ parties });
   });
 
   app.get<{ Params: { id: string } }>('/parties/:id', async (request, reply) => {
-    const party = store.findPartyById(request.params.id);
+    const party = await app.store.findPartyById(request.params.id);
     if (!party) {
       return reply.code(404).send({ error: 'Вечеринка не найдена' });
     }
@@ -74,7 +73,7 @@ export async function partyRoutes(app: FastifyInstance) {
           .send({ error: 'title, lat, lng и startsAt обязательны' });
       }
 
-      const party = store.createParty({
+      const party = await app.store.createParty({
         hostId: userId,
         title,
         description: description ?? '',
@@ -98,7 +97,7 @@ export async function partyRoutes(app: FastifyInstance) {
     { onRequest: [app.authenticate] },
     async (request, reply) => {
       const { userId } = request.user;
-      const party = store.findPartyById(request.params.id);
+      const party = await app.store.findPartyById(request.params.id);
 
       if (!party) {
         return reply.code(404).send({ error: 'Вечеринка не найдена' });
@@ -108,7 +107,7 @@ export async function partyRoutes(app: FastifyInstance) {
         return reply.code(403).send({ error: 'Можно удалять только свои вечеринки' });
       }
 
-      store.deleteParty(request.params.id);
+      await app.store.deleteParty(request.params.id);
       await invalidatePartiesCache(app.redis);
 
       return reply.code(204).send();

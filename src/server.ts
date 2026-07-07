@@ -1,5 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import dbPlugin from './plugins/db.js';
+import storePlugin from './plugins/store.js';
 import redisPlugin from './plugins/redis.js';
 import rateLimitPlugin from './plugins/rateLimit.js';
 import authPlugin from './plugins/auth.js';
@@ -11,6 +13,9 @@ const app = Fastify({ logger: true });
 
 async function main() {
   await app.register(cors, { origin: true });
+  // Postgres — до store, store — до роутов, которые на него полагаются
+  await app.register(dbPlugin);
+  await app.register(storePlugin);
   // Redis должен быть готов до rate-limit и auth (оба на него полагаются)
   await app.register(redisPlugin);
   await app.register(rateLimitPlugin);

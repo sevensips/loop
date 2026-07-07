@@ -1,86 +1,137 @@
-import { randomUUID } from 'node:crypto';
+import type { Pool } from 'pg';
 import type { User, Party } from '../types/index.js';
 
 /**
- * In-memory реализация хранилища.
- * Когда подключим Postgres — заменим тело методов на SQL-запросы,
- * а интерфейс (сигнатуры методов) оставим тем же самым,
- * чтобы роуты вообще не менялись.
+ * Postgres/PostGIS реализация хранилища.
+ * Сигнатуры методов те же, что были у in-memory версии — роуты не менялись
+ * почти никак, кроме добавления await (методы стали асинхронными).
  */
-class Store {
-  private users: Map<string, User> = new Map();
-  private parties: Map<string, Party> = new Map();
+export class Store {
+  constructor(private pool: Pool) {}
 
   // ---- Users ----
-  createUser(data: Omit<User, 'id' | 'createdAt'>): User {
-    const user: User = {
-      ...data,
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    this.users.set(user.id, user);
-    return user;
+  async createUser(data: Omit<User, 'id' | 'createdAt'>): Promise<User> {
+    const { rows } = await this.pool.query<UserRow>(
+      `INSERT INTO users (email, display_name, password_hash)
+       VALUES ($1, $2, $3)
+       RETURNING id, email, display_name, password_hash, created_at`,
+      [data.email, data.displayName, data.passwordHash]
+    );
+    return rowToUser(rows[0]);
   }
 
-  findUserByEmail(email: string): User | undefined {
-    return [...this.users.values()].find((u) => u.email === email);
+  async findUserByEmail(email: string): Promise<User | undefined> {
+    const { rows } = await this.pool.query<UserRow>(
+      `SELECT id, email, display_name, password_hash, created_at
+       FROM users WHERE email = $1`,
+      [email]
+    );
+    return rows[0] ? rowToUser(rows[0]) : undefined;
   }
 
-  findUserById(id: string): User | undefined {
-    return this.users.get(id);
+  async findUserById(id: string): Promise<User | undefined> {
+    const { rows } = await this.pool.query<UserRow>(
+      `SELECT id, email, display_name, password_hash, created_at
+       FROM users WHERE id = $1`,
+      [id]
+    );
+    return rows[0] ? rowToUser(rows[0]) : undefined;
   }
 
   // ---- Parties ----
-  createParty(data: Omit<Party, 'id' | 'createdAt'>): Party {
-    const party: Party = {
-      ...data,
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    this.parties.set(party.id, party);
-    return party;
-  }
-
-  listParties(): Party[] {
-    return [...this.parties.values()].sort(
-      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+  async createParty(data: Omit<Party, 'id' | 'createdAt'>): Promise<Party> {
+    const { rows } = await this.pool.query<PartyRow>(
+      `INSERT INTO parties (host_id, title, description, address, starts_at, location)
+       VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography)
+       RETURNING id, host_id, title, description, address, starts_at, created_at,
+                 ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng`,
+      [data.hostId, data.title, data.description, data.address ?? null, data.startsAt, data.lng, data.lat]
     );
+    return rowToParty(rows[0]);
   }
 
-  findPartyById(id: string): Party | undefined {
-    return this.parties.get(id);
+  async listParties(): Promise<Party[]> {
+    const { rows } = await this.pool.query<PartyRow>(
+      `SELECT id, host_id, title, description, address, starts_at, created_at,
+              ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
+       FROM parties
+       ORDER BY starts_at ASC`
+    );
+    return rows.map(rowToParty);
   }
 
-  deleteParty(id: string): boolean {
-    return this.parties.delete(id);
+  async findPartyById(id: string): Promise<Party | undefined> {
+    const { rows } = await this.pool.query<PartyRow>(
+      `SELECT id, host_id, title, description, address, starts_at, created_at,
+              ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
+       FROM parties WHERE id = $1`,
+      [id]
+    );
+    return rows[0] ? rowToParty(rows[0]) : undefined;
+  }
+
+  async deleteParty(id: string): Promise<boolean> {
+    const result = await this.pool.query('DELETE FROM parties WHERE id = $1', [id]);
+    return (result.rowCount ?? 0) > 0;
   }
 
   /**
-   * Геопоиск по формуле гаверсинуса (в километрах).
-   * Когда будет Postgres+PostGIS — заменим на ST_DWithin, будет быстрее на больших объёмах,
-   * но пока для MVP это абсолютно нормально.
+   * Геопоиск через ST_DWithin на geography-колонке с GIST-индексом.
+   * Расстояние в PostGIS geography считается в метрах, поэтому radiusKm * 1000.
    */
-  findPartiesNear(lat: number, lng: number, radiusKm: number): Party[] {
-    return this.listParties().filter((p) => {
-      const distance = haversineKm(lat, lng, p.lat, p.lng);
-      return distance <= radiusKm;
-    });
+  async findPartiesNear(lat: number, lng: number, radiusKm: number): Promise<Party[]> {
+    const { rows } = await this.pool.query<PartyRow>(
+      `SELECT id, host_id, title, description, address, starts_at, created_at,
+              ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
+       FROM parties
+       WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+       ORDER BY starts_at ASC`,
+      [lng, lat, radiusKm * 1000]
+    );
+    return rows.map(rowToParty);
   }
 }
 
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+interface UserRow {
+  id: string;
+  email: string;
+  display_name: string;
+  password_hash: string;
+  created_at: string;
 }
 
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
+interface PartyRow {
+  id: string;
+  host_id: string;
+  title: string;
+  description: string;
+  address: string | null;
+  starts_at: string;
+  created_at: string;
+  lat: number;
+  lng: number;
 }
 
-export const store = new Store();
+function rowToUser(row: UserRow): User {
+  return {
+    id: row.id,
+    email: row.email,
+    displayName: row.display_name,
+    passwordHash: row.password_hash,
+    createdAt: row.created_at,
+  };
+}
+
+function rowToParty(row: PartyRow): Party {
+  return {
+    id: row.id,
+    hostId: row.host_id,
+    title: row.title,
+    description: row.description,
+    address: row.address ?? undefined,
+    startsAt: row.starts_at,
+    lat: row.lat,
+    lng: row.lng,
+    createdAt: row.created_at,
+  };
+}

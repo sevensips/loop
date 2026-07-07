@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import { createHash } from 'node:crypto';
-import { store } from '../services/store.js';
 import { toPublicUser } from '../types/index.js';
 
 // Простой хэш пароля для MVP. Перед реальным продакшеном - заменить на bcrypt/argon2.
@@ -22,11 +21,11 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'email, password и displayName обязательны' });
       }
 
-      if (store.findUserByEmail(email)) {
+      if (await app.store.findUserByEmail(email)) {
         return reply.code(409).send({ error: 'Пользователь с таким email уже существует' });
       }
 
-      const user = store.createUser({
+      const user = await app.store.createUser({
         email,
         displayName,
         passwordHash: hashPassword(password),
@@ -43,7 +42,7 @@ export async function authRoutes(app: FastifyInstance) {
     { config: strictAuthRateLimit },
     async (request, reply) => {
       const { email, password } = request.body;
-      const user = store.findUserByEmail(email);
+      const user = await app.store.findUserByEmail(email);
 
       if (!user || user.passwordHash !== hashPassword(password)) {
         return reply.code(401).send({ error: 'Неверный email или пароль' });
@@ -56,7 +55,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.get('/auth/me', { onRequest: [app.authenticate] }, async (request, reply) => {
     const { userId } = request.user;
-    const user = store.findUserById(userId);
+    const user = await app.store.findUserById(userId);
 
     if (!user) {
       return reply.code(404).send({ error: 'Пользователь не найден' });
